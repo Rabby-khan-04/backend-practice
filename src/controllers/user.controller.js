@@ -4,6 +4,7 @@ import { ApiResponse } from "../utils/ApiResponse.js";
 import { User } from "../models/user.model.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
 import jwt from "jsonwebtoken";
+import { deleteLocalFile } from "../utils/deleteLocalFile.js";
 
 const generateAccessAndRefreshTokens = async (userId) => {
   try {
@@ -87,6 +88,8 @@ const registerUser = asyncHandler(async (req, res) => {
     "-password -refreshToken"
   );
   if (!createdUser) {
+    deleteLocalFile(avatarLocalPath);
+    deleteLocalFile(coverImageLocalPath);
     throw new ApiError(500, "Something went wrong while registering the user");
   }
 
@@ -215,7 +218,7 @@ const changeCurrentUserPassword = asyncHandler(async (req, res) => {
   const { oldPassword, newPassword } = req.body;
   const user = await User.findById(req?.user?._id);
   const isPasswordCorrect = await user.isPasswordCorrect(oldPassword);
-  if (isPasswordCorrect) {
+  if (!isPasswordCorrect) {
     throw new ApiError(400, "Invalid Password");
   }
   user.password = newPassword;
@@ -272,6 +275,8 @@ const updateUserAvatar = asyncHandler(async (req, res) => {
     { new: true }
   ).select("-password -refreshToken");
 
+  deleteLocalFile(avatarLocalPath);
+
   return res
     .status(200)
     .json(new ApiResponse(200, user, "User avatar updated successfully"));
@@ -295,6 +300,8 @@ const updateUserCoverImage = asyncHandler(async (req, res) => {
     },
     { new: true }
   ).select("-password -refreshToken");
+
+  deleteLocalFile(coverImageLocalPath);
 
   return res
     .status(200)
